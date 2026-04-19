@@ -2,7 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import type { Article } from '../types'
 
 interface Props {
-  onAdd: (word: string, translation: string, article: Article) => void
+  onAdd: (word: string, translation: string, article: Article) => boolean
 }
 
 export function WordForm({ onAdd }: Props) {
@@ -17,9 +17,11 @@ export function WordForm({ onAdd }: Props) {
       wordRef.current?.focus()
       return
     }
-    onAdd(w, translation.trim(), article)
-    setWord('')
-    setTranslation('')
+    const added = onAdd(w, translation.trim(), article)
+    if (added) {
+      setWord('')
+      setTranslation('')
+    }
     wordRef.current?.focus()
   }
 

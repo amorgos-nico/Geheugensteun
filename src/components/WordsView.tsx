@@ -7,7 +7,7 @@ import type { Article, FilterValue, Word } from '../types'
 
 interface Props {
   words: Word[]
-  onAdd: (word: string, translation: string, article: Article) => void
+  onAdd: (word: string, translation: string, article: Article) => boolean
   onDelete: (id: string) => void
 }
 

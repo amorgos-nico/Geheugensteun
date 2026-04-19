@@ -23,7 +23,9 @@ function newId() {
 export default function App() {
   const [words, setWords] = useLocalStorage<Word[]>(STORAGE_KEY, [])
   const [tab, setTab] = useState<TabKey>('words')
-  const [cheer, setCheer] = useState<{ id: number; text: string } | null>(null)
+  const [cheer, setCheer] = useState<
+    { id: number; text: string; tone: 'cheer' | 'warn' } | null
+  >(null)
   const [milestone, setMilestone] = useState<
     { id: number; photo: string; count: number } | null
   >(null)
@@ -34,6 +36,27 @@ export default function App() {
   const dismissMilestone = useCallback(() => setMilestone(null), [])
 
   const addWord = (word: string, translation: string, article: Article) => {
+    const key = word.trim().toLowerCase()
+    const existing = words.find((w) => w.word.trim().toLowerCase() === key)
+    if (existing) {
+      const sameArticle = existing.article === article
+      const options = sameArticle
+        ? [
+            `"${existing.word}" staat er al! 🙃`,
+            `Déjà vu — "${existing.word}" is already in your list!`,
+            `Dubbelop! Je had "${existing.word}" al. ⭐`,
+            `"${existing.word}"? Die ken je al — goed onthouden! 🎉`,
+          ]
+        : [
+            `"${existing.word}" staat er al als "${existing.article}"! 🤔`,
+            `Already got "${existing.word}" as "${existing.article}" — delete the old one first? 🙃`,
+            `"${existing.word}" is al in je lijstje (als ${existing.article}). ✨`,
+          ]
+      const text = options[Math.floor(Math.random() * options.length)]
+      setCheer({ id: Date.now(), text, tone: 'warn' })
+      return false
+    }
+
     const nextCount = words.length + 1
     setWords((prev) => [
       { id: newId(), word, translation, article, createdAt: new Date().toISOString() },
@@ -47,8 +70,9 @@ export default function App() {
     } else {
       const text = randomCheer(lastCheerRef.current)
       lastCheerRef.current = text
-      setCheer({ id: Date.now(), text })
+      setCheer({ id: Date.now(), text, tone: 'cheer' })
     }
+    return true
   }
 
   const deleteWord = (id: string) => {
@@ -61,7 +85,14 @@ export default function App() {
 
   return (
     <div className="max-w-[600px] mx-auto px-4 pt-5 pb-24">
-      {cheer && <Cheer key={cheer.id} message={cheer.text} onDismiss={dismissCheer} />}
+      {cheer && (
+        <Cheer
+          key={cheer.id}
+          message={cheer.text}
+          tone={cheer.tone}
+          onDismiss={dismissCheer}
+        />
+      )}
       {milestone && (
         <PhotoMilestone
           key={milestone.id}
