@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nico's geheugensteun">
+<meta name="theme-color" content="#ffffff">
+<title>Nico's geheugensteun</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📘</text></svg>">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    background: #faf9f5;
+    color: #1a1a1a;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #1a1a1a; color: #f0f0f0; }
+    input, select { background: #262626 !important; color: #f0f0f0 !important; border-color: #3a3a3a !important; }
+    .stat-neutral { background: #262626 !important; }
+    .stat-neutral .stat-label { color: #a0a0a0 !important; }
+    .subtitle { color: #a0a0a0 !important; }
+    .tip { background: rgba(255,255,255,0.05) !important; color: #a0a0a0 !important; }
+  }
+  .container { max-width: 600px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { margin: 0 0 4px; font-size: 24px; font-weight: 600; }
+  .subtitle { margin: 0 0 24px; font-size: 14px; color: #888; }
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid #e0ddd0;
+    border-radius: 10px;
+    background: #fff;
+    font-family: inherit;
+    color: inherit;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: #888; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .input-row input { flex: 1; min-width: 0; }
+  button {
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-appearance: none;
+    touch-action: manipulation;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .btn-row button { flex: 1; }
+  .btn-de { background: #E6F1FB; border-color: #378ADD; color: #0C447C; }
+  .btn-het { background: #FAEEDA; border-color: #EF9F27; color: #854F0B; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .filter-row input { flex: 1; }
+  .filter-row select { flex: 0 0 120px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+  .stat { border-radius: 10px; padding: 10px 12px; }
+  .stat-neutral { background: #f0ede4; }
+  .stat-de { background: #E6F1FB; }
+  .stat-het { background: #FAEEDA; }
+  .stat-label { font-size: 12px; color: #666; margin-bottom: 2px; }
+  .stat-de .stat-label { color: #0C447C; }
+  .stat-het .stat-label { color: #854F0B; }
+  .stat-value { font-size: 22px; font-weight: 600; }
+  .stat-de .stat-value { color: #042C53; }
+  .stat-het .stat-value { color: #412402; }
+  .word-list { display: flex; flex-direction: column; gap: 6px; }
+  .word-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .word-de { background: #E6F1FB; border-color: #B5D4F4; }
+  .word-het { background: #FAEEDA; border-color: #FAC775; }
+  .badge {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    min-width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .badge-de { background: #378ADD; }
+  .badge-het { background: #EF9F27; }
+  .word-text { flex: 1; min-width: 0; }
+  .word-name { font-size: 16px; font-weight: 500; word-break: break-word; }
+  .word-de .word-name { color: #042C53; }
+  .word-het .word-name { color: #412402; }
+  .word-translation { font-size: 13px; word-break: break-word; }
+  .word-de .word-translation { color: #185FA5; }
+  .word-het .word-translation { color: #854F0B; }
+  .del-btn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    color: inherit;
+    opacity: 0.5;
+    padding: 4px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .empty { text-align: center; padding: 32px 16px; color: #999; font-size: 14px; }
+  .tip {
+    margin-top: 24px;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Nico's geheugensteun</h1>
+  <p class="subtitle">Dutch de/het word tracker</p>
+
+  <div class="input-row">
+    <input type="text" id="word-input" placeholder="Word (e.g. tafel)" autocomplete="off" autocapitalize="none">
+    <input type="text" id="translation-input" placeholder="Translation" autocomplete="off">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-de" id="btn-add-de" type="button">+ Add as de</button>
+    <button class="btn-het" id="btn-add-het" type="button">+ Add as het</button>
+  </div>
+
+  <div class="filter-row">
+    <input type="text" id="search" placeholder="Search..." autocomplete="off">
+    <select id="filter">
+      <option value="all">All</option>
+      <option value="de">de only</option>
+      <option value="het">het only</option>
+    </select>
+  </div>
+
+  <div class="stats">
+    <div class="stat stat-neutral">
+      <div class="stat-label">Total</div>
+      <div class="stat-value" id="stat-total">0</div>
+    </div>
+    <div class="stat stat-de">
+      <div class="stat-label">de</div>
+      <div class="stat-value" id="stat-de">0</div>
+    </div>
+    <div class="stat stat-het">
+      <div class="stat-label">het</div>
+      <div class="stat-value" id="stat-het">0</div>
+    </div>
+  </div>
+
+  <div id="word-list" class="word-list"></div>
+  <div id="empty-state" class="empty">No words yet. Add your first one above!</div>
+
+  <div class="tip">
+    <strong>Tip:</strong> all diminutives (words ending in -je, -tje, -pje) are always "het" — het huisje, het kopje, het meisje.
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  var STORAGE_KEY = 'nicos-geheugensteun-words';
+  var words = [];
+  var hasStorage = false;
+
+  try {
+    localStorage.setItem('__test__', '1');
+    localStorage.removeItem('__test__');
+    hasStorage = true;
+  } catch (e) {
+    hasStorage = false;
+  }
+
+  function load() {
+    if (!hasStorage) return;
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) words = JSON.parse(stored);
+    } catch (e) { words = []; }
+  }
+
+  function save() {
+    if (!hasStorage) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+    } catch (e) {}
+  }
+
+  function addWord(article) {
+    var wordInput = document.getElementById('word-input');
+    var translationInput = document.getElementById('translation-input');
+    var word = wordInput.value.trim();
+    if (!word) { wordInput.focus(); return; }
+    words.unshift({
+      id: Date.now() + Math.random(),
+      word: word,
+      translation: translationInput.value.trim(),
+      article: article
+    });
+    wordInput.value = '';
+    translationInput.value = '';
+    save();
+    render();
+  }
+
+  function deleteWord(id) {
+    words = words.filter(function(w) { return w.id !== id; });
+    save();
+    render();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function render() {
+    var search = document.getElementById('search').value.toLowerCase();
+    var filter = document.getElementById('filter').value;
+    var list = document.getElementById('word-list');
+    var empty = document.getElementById('empty-state');
+
+    var deCount = 0, hetCount = 0;
+    for (var i = 0; i < words.length; i++) {
+      if (words[i].article === 'de') deCount++;
+      else hetCount++;
+    }
+    document.getElementById('stat-total').textContent = words.length;
+    document.getElementById('stat-de').textContent = deCount;
+    document.getElementById('stat-het').textContent = hetCount;
+
+    var filtered = words.filter(function(w) {
+      if (filter !== 'all' && w.article !== filter) return false;
+      if (search) {
+        var hay = (w.word + ' ' + (w.translation || '')).toLowerCase();
+        if (hay.indexOf(search) === -1) return false;
+      }
+      return true;
+    });
+
+    if (words.length === 0) {
+      empty.style.display = 'block';
+      empty.textContent = 'No words yet. Add your first one above!';
+      list.innerHTML = '';
+      return;
+    }
+    if (filtered.length === 0) {
+      empty.style.display = 'block';
+      empty.textContent = 'No matches.';
+      list.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    var html = '';
+    for (var j = 0; j < filtered.length; j++) {
+      var w = filtered[j];
+      html += '<div class="word-item word-' + w.article + '">';
+      html += '<span class="badge badge-' + w.article + '">' + w.article + '</span>';
+      html += '<div class="word-text">';
+      html += '<div class="word-name">' + escapeHtml(w.word) + '</div>';
+      if (w.translation) {
+        html += '<div class="word-translation">' + escapeHtml(w.translation) + '</div>';
+      }
+      html += '</div>';
+      html += '<button class="del-btn" data-id="' + w.id + '" type="button" aria-label="Delete">×</button>';
+      html += '</div>';
+    }
+    list.innerHTML = html;
+
+    var delBtns = list.querySelectorAll('.del-btn');
+    for (var k = 0; k < delBtns.length; k++) {
+      delBtns[k].addEventListener('click', function() {
+        deleteWord(Number(this.getAttribute('data-id')));
+      });
+    }
+  }
+
+  function init() {
+    document.getElementById('btn-add-de').addEventListener('click', function() { addWord('de'); });
+    document.getElementById('btn-add-het').addEventListener('click', function() { addWord('het'); });
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('filter').addEventListener('change', render);
+    document.getElementById('word-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('translation-input').focus();
+    });
+    document.getElementById('translation-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') addWord('de');
+    });
+
+    load();
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(mkdir -p /c/Users/nico/geheugensteun/reference)",
+      "Bash(mv /c/Users/nico/geheugensteun/nicos-geheugensteun.html /c/Users/nico/geheugensteun/reference/prototype.html)",
+      "Bash(npm create *)",
+      "Bash(mv _scaffold/.gitignore _scaffold/README.md _scaffold/eslint.config.js _scaffold/index.html _scaffold/package.json _scaffold/public _scaffold/src _scaffold/tsconfig.app.json _scaffold/tsconfig.json _scaffold/tsconfig.node.json _scaffold/vite.config.ts .)",
+      "Bash(rmdir _scaffold)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} | size %{size_download}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"icon.svg: HTTP %{http_code}\\\\n\" http://localhost:5173/icon.svg)",
+      "Bash(curl -s -o /dev/null -w \"src/App.tsx: HTTP %{http_code}\\\\n\" http://localhost:5173/src/App.tsx)"
+    ]
+  }
+}
