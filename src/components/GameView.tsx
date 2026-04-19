@@ -13,17 +13,19 @@ type ObstacleKind =
   | 'card-e'
   | 'card-w'
   | 'safe-water'
+  | 'nico'
 
 const SPAWN_TABLE: { kind: ObstacleKind; weight: number }[] = [
   { kind: 'rock', weight: 25 },
   { kind: 'whale', weight: 5 },
-  { kind: 'lat-red', weight: 12 },
-  { kind: 'lat-green', weight: 12 },
-  { kind: 'card-n', weight: 9 },
-  { kind: 'card-s', weight: 9 },
-  { kind: 'card-e', weight: 9 },
-  { kind: 'card-w', weight: 9 },
-  { kind: 'safe-water', weight: 10 },
+  { kind: 'lat-red', weight: 11 },
+  { kind: 'lat-green', weight: 11 },
+  { kind: 'card-n', weight: 8 },
+  { kind: 'card-s', weight: 8 },
+  { kind: 'card-e', weight: 8 },
+  { kind: 'card-w', weight: 8 },
+  { kind: 'safe-water', weight: 9 },
+  { kind: 'nico', weight: 7 },
 ]
 const SPAWN_TOTAL = SPAWN_TABLE.reduce((s, e) => s + e.weight, 0)
 
@@ -89,7 +91,9 @@ function spawnObstacle(g: GameState) {
       ? 36 + Math.random() * 8
       : kind === 'rock'
         ? 18 + Math.random() * 10
-        : 13
+        : kind === 'nico'
+          ? 18
+          : 13
   const x = radius + 8 + Math.random() * (g.width - 2 * (radius + 8))
   g.obstacles.push({ kind, x, y: -radius - 18, r: radius, seed: Math.random() })
 }
@@ -434,7 +438,64 @@ function drawWhale(ctx: CanvasRenderingContext2D, o: Obstacle) {
   ctx.stroke()
 }
 
-function drawObstacle(ctx: CanvasRenderingContext2D, o: Obstacle) {
+function drawNico(
+  ctx: CanvasRenderingContext2D,
+  o: Obstacle,
+  img: HTMLImageElement | null,
+  t: number,
+) {
+  // pulsing golden glow so it reads as a collectible, not an obstacle
+  const pulse = (Math.sin(t * 0.008) + 1) * 0.5
+  const glowR = o.r + 5 + pulse * 4
+  ctx.fillStyle = `rgba(250, 204, 21, ${0.18 + pulse * 0.22})`
+  ctx.beginPath()
+  ctx.arc(o.x, o.y, glowR, 0, Math.PI * 2)
+  ctx.fill()
+
+  // life-ring outer (red)
+  ctx.fillStyle = RED
+  ctx.beginPath()
+  ctx.arc(o.x, o.y, o.r + 2.5, 0, Math.PI * 2)
+  ctx.fill()
+  // white accents on life-ring (quarter cross)
+  ctx.fillStyle = WHITE
+  ctx.fillRect(o.x - o.r - 2.5, o.y - 1.2, (o.r + 2.5) * 2, 2.4)
+  ctx.fillRect(o.x - 1.2, o.y - o.r - 2.5, 2.4, (o.r + 2.5) * 2)
+
+  // photo clipped to circle
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2)
+  ctx.clip()
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, o.x - o.r, o.y - o.r, o.r * 2, o.r * 2)
+  } else {
+    ctx.fillStyle = '#FDE68A'
+    ctx.fillRect(o.x - o.r, o.y - o.r, o.r * 2, o.r * 2)
+    ctx.fillStyle = '#6B7280'
+    ctx.font = 'bold 18px -apple-system, system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('N', o.x, o.y)
+    ctx.textAlign = 'start'
+    ctx.textBaseline = 'alphabetic'
+  }
+  ctx.restore()
+
+  // inner white rim
+  ctx.strokeStyle = WHITE
+  ctx.lineWidth = 1.4
+  ctx.beginPath()
+  ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2)
+  ctx.stroke()
+}
+
+function drawObstacle(
+  ctx: CanvasRenderingContext2D,
+  o: Obstacle,
+  img: HTMLImageElement | null,
+  t: number,
+) {
   switch (o.kind) {
     case 'rock':
       return drawRock(ctx, o)
@@ -454,6 +515,8 @@ function drawObstacle(ctx: CanvasRenderingContext2D, o: Obstacle) {
       return drawCardW(ctx, o)
     case 'safe-water':
       return drawSafeWater(ctx, o)
+    case 'nico':
+      return drawNico(ctx, o, img, t)
   }
 }
 
@@ -477,10 +540,17 @@ export function GameView() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gameRef = useRef<GameState | null>(null)
   const stateRef = useRef<State>('ready')
+  const nicoImgRef = useRef<HTMLImageElement | null>(null)
   const [state, setState] = useState<State>('ready')
   const [finalScore, setFinalScore] = useState(0)
   const [isNewBest, setIsNewBest] = useState(false)
   const [best, setBest] = useLocalStorage<number>('nicos-geheugensteun-game-best', 0)
+
+  useEffect(() => {
+    const img = new Image()
+    img.src = `${import.meta.env.BASE_URL}photos/nico-sail.jpg`
+    nicoImgRef.current = img
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -509,7 +579,7 @@ export function GameView() {
       const g = gameRef.current!
       const ctx = canvas.getContext('2d')!
       drawWater(ctx, g.width, g.height, 0)
-      for (const o of g.obstacles) drawObstacle(ctx, o)
+      for (const o of g.obstacles) drawObstacle(ctx, o, nicoImgRef.current, 0)
       drawBoat(ctx, g.boat.x, g.boat.y, g.boat.tilt)
       drawHud(ctx, g, best)
     }
@@ -593,6 +663,8 @@ export function GameView() {
       const stillOn: Obstacle[] = []
       for (const o of g.obstacles) {
         if (o.y - o.r > g.height + 20) {
+          // nico drifts off-screen if missed — no bonus, no penalty
+          if (o.kind === 'nico') continue
           g.dodged++
           g.score += 15
           if (o.kind === 'whale') {
@@ -608,26 +680,35 @@ export function GameView() {
       // survival score
       g.score = Math.max(g.score, Math.floor(g.elapsed * 10) + g.dodged * 15 + g.whalesDodged * 185)
 
-      // collision
+      // collision: nico is a collectible, everything else crashes you
+      const afterCollision: Obstacle[] = []
+      let crashed = false
       for (const o of g.obstacles) {
         const ddx = o.x - g.boat.x
         const ddy = o.y - g.boat.y
         const rr = o.r + g.boat.r - 3
-        if (ddx * ddx + ddy * ddy < rr * rr) {
-          stateRef.current = 'gameover'
-          setFinalScore(g.score)
-          if (g.score > startBest) {
-            setBest(g.score)
-            setIsNewBest(true)
-          }
-          setState('gameover')
-          break
+        const hit = ddx * ddx + ddy * ddy < rr * rr
+        if (hit && o.kind === 'nico') {
+          g.score += 500
+          continue
         }
+        if (hit) crashed = true
+        afterCollision.push(o)
+      }
+      g.obstacles = afterCollision
+      if (crashed) {
+        stateRef.current = 'gameover'
+        setFinalScore(g.score)
+        if (g.score > startBest) {
+          setBest(g.score)
+          setIsNewBest(true)
+        }
+        setState('gameover')
       }
 
       // render
       drawWater(ctx, g.width, g.height, now)
-      for (const o of g.obstacles) drawObstacle(ctx, o)
+      for (const o of g.obstacles) drawObstacle(ctx, o, nicoImgRef.current, now)
       drawBoat(ctx, g.boat.x, g.boat.y, g.boat.tilt)
       drawHud(ctx, g, best)
 
@@ -649,7 +730,7 @@ export function GameView() {
     <>
       <h1 className="text-2xl font-semibold mb-1">Sail</h1>
       <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-        Drag left or right to steer. Avoid rocks, buoys, and whales.
+        Drag to steer. Avoid rocks, buoys, and whales — sail into Nico for a bonus.
       </p>
 
       <div className="relative rounded-[14px] overflow-hidden shadow-lg">
@@ -690,7 +771,7 @@ export function GameView() {
       </div>
 
       <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-4 text-center">
-        Whales are rare — dodging one is worth 200 points.
+        Dodging a whale: +200. Catching Nico's life-ring: +500.
       </p>
     </>
   )
