@@ -5,6 +5,9 @@ export interface Word {
   word: string
   translation: string
   article: Article
+  createdAt?: string
 }
 
 export type FilterValue = 'all' | Article
+
+export type TabKey = 'words' | 'stats'

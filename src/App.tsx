@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
-import { WordForm } from './components/WordForm'
-import { SearchFilter } from './components/SearchFilter'
-import { Stats } from './components/Stats'
-import { WordList } from './components/WordList'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Cheer } from './components/Cheer'
+import { TabBar } from './components/TabBar'
+import { WordsView } from './components/WordsView'
+import { StatsView } from './components/StatsView'
+import { randomCheer } from './cheers'
 import { useLocalStorage } from './hooks/useLocalStorage'
-import type { Article, FilterValue, Word } from './types'
+import type { Article, TabKey, Word } from './types'
 
 const STORAGE_KEY = 'nicos-geheugensteun-words'
 
@@ -17,60 +18,39 @@ function newId() {
 
 export default function App() {
   const [words, setWords] = useLocalStorage<Word[]>(STORAGE_KEY, [])
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<FilterValue>('all')
+  const [tab, setTab] = useState<TabKey>('words')
+  const [cheer, setCheer] = useState<{ id: number; text: string } | null>(null)
+  const lastCheerRef = useRef<string | undefined>(undefined)
+
+  const dismissCheer = useCallback(() => setCheer(null), [])
 
   const addWord = (word: string, translation: string, article: Article) => {
-    setWords((prev) => [{ id: newId(), word, translation, article }, ...prev])
+    setWords((prev) => [
+      { id: newId(), word, translation, article, createdAt: new Date().toISOString() },
+      ...prev,
+    ])
+    const text = randomCheer(lastCheerRef.current)
+    lastCheerRef.current = text
+    setCheer({ id: Date.now(), text })
   }
 
   const deleteWord = (id: string) => {
     setWords((prev) => prev.filter((w) => w.id !== id))
   }
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return words.filter((w) => {
-      if (filter !== 'all' && w.article !== filter) return false
-      if (!q) return true
-      return (w.word + ' ' + w.translation).toLowerCase().includes(q)
-    })
-  }, [words, search, filter])
-
-  const counts = useMemo(() => {
-    let de = 0
-    let het = 0
-    for (const w of words) {
-      if (w.article === 'de') de++
-      else het++
-    }
-    return { total: words.length, de, het }
-  }, [words])
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [tab])
 
   return (
-    <div className="max-w-[600px] mx-auto px-4 pt-5 pb-10">
-      <h1 className="text-2xl font-semibold mb-1">Nico's geheugensteun</h1>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-        Dutch de/het word tracker
-      </p>
-
-      <WordForm onAdd={addWord} />
-
-      <SearchFilter
-        search={search}
-        onSearchChange={setSearch}
-        filter={filter}
-        onFilterChange={setFilter}
-      />
-
-      <Stats total={counts.total} de={counts.de} het={counts.het} />
-
-      <WordList words={filtered} totalStored={words.length} onDelete={deleteWord} />
-
-      <div className="mt-6 px-3.5 py-3 rounded-[10px] bg-black/[0.03] dark:bg-white/[0.05] text-[13px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-        <strong className="font-semibold">Tip:</strong> all diminutives (words ending
-        in -je, -tje, -pje) are always "het" — het huisje, het kopje, het meisje.
-      </div>
+    <div className="max-w-[600px] mx-auto px-4 pt-5 pb-24">
+      {cheer && <Cheer key={cheer.id} message={cheer.text} onDismiss={dismissCheer} />}
+      {tab === 'words' ? (
+        <WordsView words={words} onAdd={addWord} onDelete={deleteWord} />
+      ) : (
+        <StatsView words={words} />
+      )}
+      <TabBar active={tab} onChange={setTab} />
     </div>
   )
 }
