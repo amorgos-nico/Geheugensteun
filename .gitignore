@@ -15,6 +15,9 @@ dist-ssr
 # Claude Code local settings
 .claude/settings.local.json
 
+# Original full-size photos (resized versions in public/photos are committed)
+images/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

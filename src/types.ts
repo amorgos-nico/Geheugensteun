@@ -10,4 +10,4 @@ export interface Word {
 
 export type FilterValue = 'all' | Article
 
-export type TabKey = 'words' | 'stats'
+export type TabKey = 'words' | 'stats' | 'story'

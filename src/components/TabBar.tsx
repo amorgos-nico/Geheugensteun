@@ -8,6 +8,7 @@ interface Props {
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'words', label: 'Words', icon: '📒' },
   { key: 'stats', label: 'Stats', icon: '📊' },
+  { key: 'story', label: 'Story', icon: '✨' },
 ]
 
 export function TabBar({ active, onChange }: Props) {
