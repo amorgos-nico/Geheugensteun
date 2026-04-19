@@ -3,7 +3,38 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 
 type State = 'ready' | 'playing' | 'gameover'
 
-type ObstacleKind = 'rock' | 'buoy' | 'whale'
+type ObstacleKind =
+  | 'rock'
+  | 'whale'
+  | 'lat-red'
+  | 'lat-green'
+  | 'card-n'
+  | 'card-s'
+  | 'card-e'
+  | 'card-w'
+  | 'safe-water'
+
+const SPAWN_TABLE: { kind: ObstacleKind; weight: number }[] = [
+  { kind: 'rock', weight: 25 },
+  { kind: 'whale', weight: 5 },
+  { kind: 'lat-red', weight: 12 },
+  { kind: 'lat-green', weight: 12 },
+  { kind: 'card-n', weight: 9 },
+  { kind: 'card-s', weight: 9 },
+  { kind: 'card-e', weight: 9 },
+  { kind: 'card-w', weight: 9 },
+  { kind: 'safe-water', weight: 10 },
+]
+const SPAWN_TOTAL = SPAWN_TABLE.reduce((s, e) => s + e.weight, 0)
+
+function pickKind(): ObstacleKind {
+  let r = Math.random() * SPAWN_TOTAL
+  for (const e of SPAWN_TABLE) {
+    r -= e.weight
+    if (r <= 0) return e.kind
+  }
+  return 'rock'
+}
 
 interface Obstacle {
   kind: ObstacleKind
@@ -52,16 +83,15 @@ function clamp(v: number, lo: number, hi: number) {
 }
 
 function spawnObstacle(g: GameState) {
-  const r = Math.random()
-  let kind: ObstacleKind
-  if (r < 0.05) kind = 'whale'
-  else if (r < 0.45) kind = 'buoy'
-  else kind = 'rock'
-
+  const kind = pickKind()
   const radius =
-    kind === 'whale' ? 36 + Math.random() * 8 : kind === 'rock' ? 18 + Math.random() * 10 : 12
+    kind === 'whale'
+      ? 36 + Math.random() * 8
+      : kind === 'rock'
+        ? 18 + Math.random() * 10
+        : 13
   const x = radius + 8 + Math.random() * (g.width - 2 * (radius + 8))
-  g.obstacles.push({ kind, x, y: -radius - 8, r: radius, seed: Math.random() })
+  g.obstacles.push({ kind, x, y: -radius - 18, r: radius, seed: Math.random() })
 }
 
 function drawWater(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
@@ -162,23 +192,209 @@ function drawRock(ctx: CanvasRenderingContext2D, o: Obstacle) {
   ctx.fill()
 }
 
-function drawBuoy(ctx: CanvasRenderingContext2D, o: Obstacle) {
-  ctx.fillStyle = '#EF4444'
+const BLACK = '#0F172A'
+const YELLOW = '#FACC15'
+const RED = '#DC2626'
+const GREEN = '#16A34A'
+const WHITE = '#FFFFFF'
+
+function drawPoleAndCones(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  bodyTopY: number,
+  pattern: 'up-up' | 'up-down' | 'down-up',
+  fill: string,
+) {
+  const pole = 4
+  ctx.strokeStyle = fill
+  ctx.lineWidth = 1.1
   ctx.beginPath()
-  ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.strokeStyle = '#B91C1C'
-  ctx.lineWidth = 1
+  ctx.moveTo(x, bodyTopY)
+  ctx.lineTo(x, bodyTopY - pole)
   ctx.stroke()
 
-  ctx.fillStyle = '#FFFFFF'
-  ctx.fillRect(o.x - o.r, o.y - 2.5, o.r * 2, 5)
+  const top = bodyTopY - pole
+  ctx.fillStyle = fill
+  const cone = (baseY: number, pointsUp: boolean) => {
+    ctx.beginPath()
+    ctx.moveTo(x - 3, baseY)
+    ctx.lineTo(x + 3, baseY)
+    ctx.lineTo(x, pointsUp ? baseY - 4 : baseY + 4)
+    ctx.closePath()
+    ctx.fill()
+  }
 
-  // top marker
-  ctx.fillStyle = '#FFFFFF'
+  if (pattern === 'up-up') {
+    cone(top, true)
+    cone(top - 5, true)
+  } else if (pattern === 'up-down') {
+    // East: cones point apart (top up, bottom down)
+    cone(top - 5, true)
+    cone(top, false)
+  } else {
+    // West: cones point together (top down, bottom up)
+    cone(top - 5, false)
+    cone(top, true)
+  }
+}
+
+function drawTwoDownCones(ctx: CanvasRenderingContext2D, x: number, bodyTopY: number, fill: string) {
+  const pole = 4
+  ctx.strokeStyle = fill
+  ctx.lineWidth = 1.1
   ctx.beginPath()
-  ctx.arc(o.x, o.y - o.r - 3, 2.5, 0, Math.PI * 2)
+  ctx.moveTo(x, bodyTopY)
+  ctx.lineTo(x, bodyTopY - pole)
+  ctx.stroke()
+  const top = bodyTopY - pole
+  ctx.fillStyle = fill
+  // upper cone points down; its "base" is at the top, point extends down to top+4
+  // lower cone points down; base at top+5, point at top+9
+  const down = (baseY: number) => {
+    ctx.beginPath()
+    ctx.moveTo(x - 3, baseY)
+    ctx.lineTo(x + 3, baseY)
+    ctx.lineTo(x, baseY + 4)
+    ctx.closePath()
+    ctx.fill()
+  }
+  down(top - 9)
+  down(top - 4)
+}
+
+function drawLatRed(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const w = 16
+  const h = 18
+  const topY = o.y - h / 2
+  ctx.fillStyle = RED
+  ctx.fillRect(o.x - w / 2, topY, w, h)
+  ctx.strokeStyle = '#7F1D1D'
+  ctx.lineWidth = 1
+  ctx.strokeRect(o.x - w / 2 + 0.5, topY + 0.5, w - 1, h - 1)
+  // small topmark: red can/cylinder shape suggestion (simple ball)
+  ctx.fillStyle = RED
+  ctx.strokeStyle = '#7F1D1D'
+  ctx.beginPath()
+  ctx.arc(o.x, topY - 4, 2.8, 0, Math.PI * 2)
   ctx.fill()
+  ctx.stroke()
+  // water ripple
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(o.x - w / 2 - 2, o.y + h / 2 - 1, w + 4, 2)
+}
+
+function drawLatGreen(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  ctx.fillStyle = GREEN
+  ctx.strokeStyle = '#14532D'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(o.x, o.y - 11)
+  ctx.lineTo(o.x + 9, o.y + 8)
+  ctx.lineTo(o.x - 9, o.y + 8)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+  // cone topmark
+  ctx.fillStyle = GREEN
+  ctx.beginPath()
+  ctx.moveTo(o.x, o.y - 18)
+  ctx.lineTo(o.x - 3, o.y - 13)
+  ctx.lineTo(o.x + 3, o.y - 13)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+  // ripple
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(o.x - 11, o.y + 8, 22, 2)
+}
+
+function drawCardinalBody(
+  ctx: CanvasRenderingContext2D,
+  o: Obstacle,
+  bands: { color: string; frac: number }[],
+) {
+  const w = 14
+  const h = 18
+  const topY = o.y - h / 2
+  let y = topY
+  for (const b of bands) {
+    const bh = h * b.frac
+    ctx.fillStyle = b.color
+    ctx.fillRect(o.x - w / 2, y, w, bh)
+    y += bh
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+  ctx.lineWidth = 0.8
+  ctx.strokeRect(o.x - w / 2 + 0.5, topY + 0.5, w - 1, h - 1)
+  // ripple
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(o.x - w / 2 - 2, o.y + h / 2 - 1, w + 4, 2)
+  return topY
+}
+
+function drawCardN(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const topY = drawCardinalBody(ctx, o, [
+    { color: BLACK, frac: 0.5 },
+    { color: YELLOW, frac: 0.5 },
+  ])
+  drawPoleAndCones(ctx, o.x, topY, 'up-up', BLACK)
+}
+
+function drawCardS(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const topY = drawCardinalBody(ctx, o, [
+    { color: YELLOW, frac: 0.5 },
+    { color: BLACK, frac: 0.5 },
+  ])
+  drawTwoDownCones(ctx, o.x, topY, BLACK)
+}
+
+function drawCardE(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const topY = drawCardinalBody(ctx, o, [
+    { color: BLACK, frac: 0.35 },
+    { color: YELLOW, frac: 0.3 },
+    { color: BLACK, frac: 0.35 },
+  ])
+  drawPoleAndCones(ctx, o.x, topY, 'up-down', BLACK)
+}
+
+function drawCardW(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const topY = drawCardinalBody(ctx, o, [
+    { color: YELLOW, frac: 0.35 },
+    { color: BLACK, frac: 0.3 },
+    { color: YELLOW, frac: 0.35 },
+  ])
+  drawPoleAndCones(ctx, o.x, topY, 'down-up', BLACK)
+}
+
+function drawSafeWater(ctx: CanvasRenderingContext2D, o: Obstacle) {
+  const w = 16
+  const h = 18
+  const topY = o.y - h / 2
+  // vertical red/white stripes
+  const stripes = 4
+  const sw = w / stripes
+  for (let i = 0; i < stripes; i++) {
+    ctx.fillStyle = i % 2 === 0 ? RED : WHITE
+    ctx.fillRect(o.x - w / 2 + i * sw, topY, sw, h)
+  }
+  ctx.strokeStyle = '#7F1D1D'
+  ctx.lineWidth = 0.8
+  ctx.strokeRect(o.x - w / 2 + 0.5, topY + 0.5, w - 1, h - 1)
+  // pole
+  ctx.strokeStyle = RED
+  ctx.lineWidth = 1.1
+  ctx.beginPath()
+  ctx.moveTo(o.x, topY)
+  ctx.lineTo(o.x, topY - 5)
+  ctx.stroke()
+  // red ball on top
+  ctx.fillStyle = RED
+  ctx.beginPath()
+  ctx.arc(o.x, topY - 7, 3, 0, Math.PI * 2)
+  ctx.fill()
+  // ripple
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(o.x - w / 2 - 2, o.y + h / 2 - 1, w + 4, 2)
 }
 
 function drawWhale(ctx: CanvasRenderingContext2D, o: Obstacle) {
@@ -219,9 +435,26 @@ function drawWhale(ctx: CanvasRenderingContext2D, o: Obstacle) {
 }
 
 function drawObstacle(ctx: CanvasRenderingContext2D, o: Obstacle) {
-  if (o.kind === 'rock') drawRock(ctx, o)
-  else if (o.kind === 'buoy') drawBuoy(ctx, o)
-  else drawWhale(ctx, o)
+  switch (o.kind) {
+    case 'rock':
+      return drawRock(ctx, o)
+    case 'whale':
+      return drawWhale(ctx, o)
+    case 'lat-red':
+      return drawLatRed(ctx, o)
+    case 'lat-green':
+      return drawLatGreen(ctx, o)
+    case 'card-n':
+      return drawCardN(ctx, o)
+    case 'card-s':
+      return drawCardS(ctx, o)
+    case 'card-e':
+      return drawCardE(ctx, o)
+    case 'card-w':
+      return drawCardW(ctx, o)
+    case 'safe-water':
+      return drawSafeWater(ctx, o)
+  }
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, g: GameState, best: number) {
