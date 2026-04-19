@@ -5,6 +5,7 @@ import { TabBar } from './components/TabBar'
 import { WordsView } from './components/WordsView'
 import { StatsView } from './components/StatsView'
 import { StoryView } from './components/StoryView'
+import { GameView } from './components/GameView'
 import { randomCheer } from './cheers'
 import { randomPhoto } from './photos'
 import { useLocalStorage } from './hooks/useLocalStorage'
@@ -72,6 +73,7 @@ export default function App() {
       {tab === 'words' && <WordsView words={words} onAdd={addWord} onDelete={deleteWord} />}
       {tab === 'stats' && <StatsView words={words} />}
       {tab === 'story' && <StoryView words={words} />}
+      {tab === 'game' && <GameView />}
       <TabBar active={tab} onChange={setTab} />
     </div>
   )
